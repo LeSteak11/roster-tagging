@@ -339,3 +339,109 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error getting tagged image count: {e}")
             return 0
+    
+    def get_visible_profiles_with_counts(self) -> List[Dict]:
+        """
+        Get all visible profiles (excluding hidden ones like IMG) with their image counts
+        
+        Returns:
+            List[Dict]: List of visible profile dictionaries with image_count field
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("""
+                SELECT p.id, p.username, COUNT(i.id) as image_count
+                FROM profiles p
+                LEFT JOIN images i ON p.username = i.username
+                WHERE p.username != 'IMG'
+                GROUP BY p.id, p.username
+                HAVING COUNT(i.id) > 0
+                ORDER BY p.username
+                """)
+                return [dict(row) for row in cursor.fetchall()]
+        except Exception as e:
+            print(f"Error getting visible profiles with counts: {e}")
+            return []
+    
+    def get_hidden_profiles_stats(self) -> Dict:
+        """
+        Get statistics for hidden profiles
+        
+        Returns:
+            Dict: Statistics for hidden profiles
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("""
+                SELECT p.username, COUNT(i.id) as image_count
+                FROM profiles p
+                LEFT JOIN images i ON p.username = i.username
+                WHERE p.username = 'IMG'
+                GROUP BY p.username
+                """)
+                result = cursor.fetchone()
+                
+                if result:
+                    return {
+                        'username': result['username'],
+                        'image_count': result['image_count']
+                    }
+                else:
+                    return {'username': 'IMG', 'image_count': 0}
+        except Exception as e:
+            print(f"Error getting hidden profiles stats: {e}")
+            return {'username': 'IMG', 'image_count': 0}
+    
+    def get_visible_profile_count(self) -> int:
+        """Get count of visible profiles (excluding hidden ones)"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM profiles WHERE username != 'IMG'")
+                return cursor.fetchone()[0]
+        except Exception as e:
+            print(f"Error getting visible profile count: {e}")
+            return 0
+    
+    def rename_profile(self, old_username: str, new_username: str) -> bool:
+        """
+        Rename a profile and update all associated images
+        
+        Args:
+            old_username (str): Current username
+            new_username (str): New username
+            
+        Returns:
+            bool: True if successful
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Check if new username already exists
+                cursor.execute("SELECT id FROM profiles WHERE username = ?", (new_username,))
+                existing = cursor.fetchone()
+                
+                if existing:
+                    # New username exists, merge profiles
+                    # Update all images to use new username
+                    cursor.execute("UPDATE images SET username = ? WHERE username = ?", 
+                                 (new_username, old_username))
+                    # Delete old profile
+                    cursor.execute("DELETE FROM profiles WHERE username = ?", (old_username,))
+                else:
+                    # New username doesn't exist, simple rename
+                    cursor.execute("UPDATE profiles SET username = ? WHERE username = ?", 
+                                 (new_username, old_username))
+                    cursor.execute("UPDATE images SET username = ? WHERE username = ?", 
+                                 (new_username, old_username))
+                
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"Error renaming profile from {old_username} to {new_username}: {e}")
+            return False

@@ -150,8 +150,8 @@ def main():
         
         st.divider()
         
-        # Display profiles with counts
-        profiles = db_manager.get_profiles_with_counts()
+        # Display profiles with counts (excluding hidden profiles)
+        profiles = db_manager.get_visible_profiles_with_counts()
         if profiles:
             st.subheader("📋 Profile List")
             
@@ -181,6 +181,12 @@ def main():
                     st.rerun()
         else:
             st.info("No profiles found yet")
+        
+        # Hidden profiles note
+        hidden_stats = db_manager.get_hidden_profiles_stats()
+        if hidden_stats['image_count'] > 0:
+            st.write("---")
+            st.caption(f"🔒 Hidden Profiles: {hidden_stats['username']} ({hidden_stats['image_count']} images)")
         
         st.divider()
         
@@ -244,10 +250,10 @@ def main():
         
         # Statistics
         total_images = db_manager.get_image_count()
-        total_profiles = db_manager.get_profile_count()
+        total_profiles = db_manager.get_visible_profile_count()  # Use visible count
         
         st.subheader("📊 Statistics")
-        st.metric("Total Profiles", total_profiles)
+        st.metric("Visible Profiles", total_profiles)
         st.metric("Total Images", total_images) 
         st.metric("Tagged Images", tagged_count)
         if total_images > 0:
@@ -274,17 +280,17 @@ def main():
         st.header("🖼️ All Profiles Overview")
         
         total_images = db_manager.get_image_count()
-        total_profiles = db_manager.get_profile_count()
+        total_profiles = db_manager.get_visible_profile_count()  # Use visible count
         
         if total_profiles > 0:
             col1, col2 = st.columns(2)
             with col1:
                 st.metric("Total Images", total_images)
             with col2:
-                st.metric("Total Profiles", total_profiles)
+                st.metric("Visible Profiles", total_profiles)
             
             st.subheader("📋 Profile Summary")
-            profiles = db_manager.get_profiles_with_counts()
+            profiles = db_manager.get_visible_profiles_with_counts()  # Use visible profiles
             
             # Display profiles in a nice table format
             if profiles:
