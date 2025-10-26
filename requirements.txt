@@ -3,3 +3,4 @@ sqlite3-utils==3.34
 pandas==2.1.1
 pathlib==1.0.1
 Pillow>=7.1.0
+google-generativeai>=0.3.0
