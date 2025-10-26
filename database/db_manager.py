@@ -127,6 +127,29 @@ class DatabaseManager:
             print(f"Error getting profiles: {e}")
             return []
     
+    def get_profiles_with_counts(self) -> List[Dict]:
+        """
+        Get all profiles with their image counts
+        
+        Returns:
+            List[Dict]: List of profile dictionaries with image_count field
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("""
+                SELECT p.id, p.username, COUNT(i.id) as image_count
+                FROM profiles p
+                LEFT JOIN images i ON p.username = i.username
+                GROUP BY p.id, p.username
+                ORDER BY p.username
+                """)
+                return [dict(row) for row in cursor.fetchall()]
+        except Exception as e:
+            print(f"Error getting profiles with counts: {e}")
+            return []
+    
     def get_images_by_username(self, username: str) -> List[Dict]:
         """
         Get all images for a specific username
